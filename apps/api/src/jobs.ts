@@ -1,0 +1,7 @@
+import {randomUUID,randomBytes,createCipheriv,createDecipheriv} from 'node:crypto';
+import {Sql} from './db.js';
+import {User} from './policy.js';
+import {unavailable} from './errors.js';
+export async function enqueue(sql:Sql,u:User,kind:string,resourceId:string,caseId:string|null=null,data:Record<string,any>={}){const id=randomUUID();let available=new Date();if(kind==='reminder'&&data.dueAt){available=new Date(data.dueAt.length===10?data.dueAt+'T14:00:00Z':data.dueAt);if(!Number.isFinite(available.getTime()))throw new Error('Invalid reminder time');}await sql.query('INSERT INTO jobs(id,firm_id,requested_by,case_id,kind,resource_id,data,available_at) VALUES($1,$2,$3,$4,$5,$6,$7,$8)',[id,u.firm_id,u.id,caseId,kind,resourceId,JSON.stringify(data),available]);return id;}
+export function encryptSecret(text:string){const key=Buffer.from(process.env.JOB_ENCRYPTION_KEY||'','base64');if(key.length!==32)throw unavailable('Cifrado de notificaciones');const iv=randomBytes(12),cipher=createCipheriv('aes-256-gcm',key,iv);const value=Buffer.concat([cipher.update(text,'utf8'),cipher.final()]);return Buffer.concat([iv,cipher.getAuthTag(),value]).toString('base64');}
+export function decryptSecret(text:string){const key=Buffer.from(process.env.JOB_ENCRYPTION_KEY||'','base64'),raw=Buffer.from(text,'base64');const cipher=createDecipheriv('aes-256-gcm',key,raw.subarray(0,12));cipher.setAuthTag(raw.subarray(12,28));return Buffer.concat([cipher.update(raw.subarray(28)),cipher.final()]).toString('utf8');}
