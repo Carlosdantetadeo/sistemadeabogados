@@ -2,6 +2,8 @@
 
 Node.js 22, TypeScript, NestJS y PostgreSQL. El código está en `src`, las migraciones en `migrations` y el contrato aprobado se copia a `src/contract.json` para el despliegue. El mockup de `../../mockup` sigue separado: todavía no es un frontend conectado.
 
+Las migraciones aplicadas conservan sus bytes originales mediante `.gitattributes`: el historial verifica SHA-256 exactos. No convertir sus saltos de línea ni editar archivos ya aplicados; añadir una migración nueva para cualquier cambio.
+
 ## Lo implementado
 
 - Sesiones de servidor, CSRF, caducidad, revocación, cuentas activas y límite de solicitudes.
@@ -39,10 +41,11 @@ El bootstrap solo funciona con una instalación vacía. No genera contraseñas p
 
 ## Supabase
 
-1. Usar un proyecto destinado a esta aplicación. Revisar las migraciones antes de aplicarlas; no se han ejecutado en ningún proyecto remoto.
+1. Usar un proyecto destinado a esta aplicación. Las migraciones `001`–`003` ya se aplicaron en `dpdtgpruudcqhebzcypq` el 2026-11-02; ver [estado y pendientes](../../STATUS.md). El ejecutor comprueba los checksums y omite las migraciones ya aplicadas. Revisar siempre el destino antes de ejecutarlo en otro entorno.
 2. Configurar `DATABASE_URL` con la conexión **Transaction pooler** para Vercel, `DATABASE_POOL_MAX=1` y `DATABASE_SSL=true`. Node `pg` usa consultas sin nombre y no mantiene prepared statements con nombre. Copiar host/usuario/puerto desde Connect, no construirlos por suposición.
 3. Configurar `DIRECT_DATABASE_URL` para migraciones con conexión directa o Session pooler. Si tu certificado requiere CA, colocarla en `DATABASE_CA_CERT`; no desactivar la verificación TLS.
 4. La migración `002_supabase_hardening.sql` habilita RLS y retira permisos de `anon`/`authenticated` sobre las tablas de negocio. No hay políticas para acceder directamente desde el navegador. La API usa una conexión de servidor privilegiada y aplica la política por expediente. No exponer `DATABASE_URL`, credenciales S3 ni claves secretas al frontend.
+   La migración `003_migration_metadata_security.sql` también protege `schema_migrations` y retira sus permisos de `PUBLIC`, `anon` y `authenticated`; Supabase asigna privilegios por defecto a las tablas nuevas.
 5. Crear un bucket **privado** y configurar S3 de Supabase: `S3_ENDPOINT`, `S3_REGION`, `S3_BUCKET`, credenciales de servidor y `S3_FORCE_PATH_STYLE=true`. No habilitar acceso público ni políticas de lectura a navegador para el bucket. La aplicación conserva sus propias versiones porque Supabase S3 no ofrece versionado S3.
 6. Configurar `SUPABASE_URL` y `SUPABASE_PUBLISHABLE_KEY`. Usar claves JWT asimétricas con JWKS; solo para proyectos con firma heredada HS256, configurar `SUPABASE_JWT_SECRET` exclusivamente en servidor. La clave pública no es una `service_role`.
 7. El futuro frontend inicia sesión y completa MFA mediante Supabase Auth, y envía su access token a `POST /auth/supabase/exchange` desde `APP_ORIGIN`. La API crea cookies de sesión propias. Para altas, el estudio debe emitir una invitación y el intercambio incluye `invitationToken`; el registro libre en Supabase no concede acceso al estudio. Configurar `INVITATION_RETURN_URL` con la pantalla de invitación del frontend Supabase; `/auth/start` corresponde a la alternativa OIDC y no sustituye esa pantalla.

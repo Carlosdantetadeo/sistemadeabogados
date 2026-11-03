@@ -51,7 +51,7 @@ Ver el [estado de construcción](STATUS.md) para distinguir prototipo, contrato 
 
 - Especificación y mockup interactivo con datos ficticios disponibles.
 - Proyectos y expedientes con búsqueda, filtros, paginación y fichas según permisos simulados.
-- Backend inicial implementado en [apps/api](apps/api/README.md): NestJS/TypeScript, migraciones PostgreSQL, sesiones, permisos, módulos de negocio y adaptadores de archivos/OCR. Preparado para Vercel y servicios Supabase, todavía sin conexión/despliegue remoto ni aceptación de producción. El frontend React/PWA sigue pendiente y el mockup no está conectado a la API.
+- Backend inicial implementado en [apps/api](apps/api/README.md): NestJS/TypeScript, migraciones PostgreSQL, sesiones, permisos, módulos de negocio y adaptadores de archivos/OCR. El [estado de construcción](STATUS.md) registra la conexión Supabase, las migraciones aplicadas y el despliegue Vercel. La aceptación de producción y el frontend React/PWA siguen pendientes; el mockup no está conectado a la API.
 - La versión inicial incluye proyectos, asignaciones, documentos con OCR de texto revisado, plazos verificados, casillas, importación, portal, economía y reportes. OCR real requiere resolver D09; el mockup solo demuestra la revisión con texto ficticio. IA y conectores externos permanecen condicionados y desactivados.
 
 ## Permisos acordados

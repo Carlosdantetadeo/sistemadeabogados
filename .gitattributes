@@ -1,0 +1,2 @@
+# Applied migrations use exact byte checksums; preserve their original line endings.
+apps/api/migrations/*.sql -text

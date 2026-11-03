@@ -22,9 +22,21 @@ test('Supabase exchange verifies JWT and server user; local profile and aal2 gov
 });
 test('Supabase browser roles cannot query backend tables through the Data API',async()=>{
  const x=await setup();try{
-  await x.db.engine.exec('CREATE ROLE anon; CREATE ROLE authenticated; GRANT USAGE ON SCHEMA public TO authenticated; GRANT SELECT ON costs TO authenticated;');
+  await x.db.engine.exec('CREATE TABLE schema_migrations(name text PRIMARY KEY, sha256 text NOT NULL);');
+  await x.db.engine.exec('CREATE ROLE anon; CREATE ROLE authenticated; GRANT USAGE ON SCHEMA public TO anon, authenticated; GRANT SELECT ON costs TO authenticated; GRANT ALL ON schema_migrations TO PUBLIC, anon, authenticated;');
   await x.db.engine.exec(await readFile(new URL('../migrations/002_supabase_hardening.sql',import.meta.url),'utf8'));
+  await x.db.engine.exec(await readFile(new URL('../migrations/003_migration_metadata_security.sql',import.meta.url),'utf8'));
   const enabled=await x.db.query("SELECT relrowsecurity FROM pg_class WHERE relname='costs'");assert.equal(enabled.rows[0].relrowsecurity,true);
+  const metadata=await x.db.query("SELECT relrowsecurity FROM pg_class WHERE relname='schema_migrations'");assert.equal(metadata.rows[0].relrowsecurity,true);
+  for(const role of ['anon','authenticated']){
+   for(const privilege of ['SELECT','INSERT','UPDATE','DELETE','TRUNCATE','REFERENCES','TRIGGER']){
+    const permission=await x.db.query('SELECT has_table_privilege($1,$2,$3) AS allowed',[role,'schema_migrations',privilege]);assert.equal(permission.rows[0].allowed,false);
+   }
+   await x.db.engine.exec('SET ROLE '+role);
+   await assert.rejects(x.db.query('SELECT * FROM schema_migrations'),/permission denied/);
+   await assert.rejects(x.db.query('DELETE FROM schema_migrations'),/permission denied/);
+   await x.db.engine.exec('RESET ROLE');
+  }
   await x.db.engine.exec('SET ROLE authenticated');
   await assert.rejects(x.db.query('SELECT * FROM costs'),/permission denied/);
   await x.db.engine.exec('RESET ROLE');
